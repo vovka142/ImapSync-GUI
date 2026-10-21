@@ -5,7 +5,8 @@ class ImapSync:
         self.config = config
 
     @staticmethod
-    def check_credentials(host: str, port: str, user: str, password: str) -> bool:
+    def check_credentials(host: str, port: str, user: str, password: str) -> None:
+        """Raise FileNotFoundError (imapsync missing), TimeoutExpired or RuntimeError(imapsync output)."""
         args = [
             "imapsync",
             "--host1", host,
@@ -16,11 +17,10 @@ class ImapSync:
             "--nolog"
         ]
 
-        try:
-            result = subprocess.run(args, capture_output=True, text=True, timeout=20)
-            return result.returncode == 0
-        except Exception:
-            return False
+        result = subprocess.run(args, capture_output=True, text=True, timeout=20)
+        if result.returncode != 0:
+            lines = (result.stderr or result.stdout).strip().splitlines()
+            raise RuntimeError(lines[-1] if lines else f"exit code {result.returncode}")
 
     def sync_process(self) -> subprocess.Popen[str]:
         cfg = self.config

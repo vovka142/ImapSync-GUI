@@ -1,25 +1,61 @@
 {
   "sections": {
     "source": "Source Mailbox",
-    "target": "Target Mailbox",
-    "output": "Migration Logs"
+    "target": "Target Mailbox"
   },
-
   "fields": {
     "host": "Host",
     "port": "Port",
     "user": "User",
     "password": "Password"
   },
-
   "button_start": "Start Migration",
   "button_stop": "Stop",
   "button_clear": "Clear Logs",
-
-  "check_failed": "Connection check failed. Please verify the credentials.",
+  "check_imapsync_missing": "imapsync was not found. Please install it and make sure it is in your PATH.",
+  "check_timeout": "Connection to {host}:{port} timed out.",
+  "check_failed_detail": "Login failed: {detail}",
   "migration_starting": "Starting migration...",
   "migration_stopping": "Stopping migration...",
   "migration_stopped": "Migration stopped.",
   "migration_success": "Migration completed successfully.",
-  "migration_failed": "Migration failed."
+  "migration_failed": "Migration failed.",
+  "app_subtitle": "Copy a mailbox from one IMAP server to another.",
+  "placeholders": {
+    "host": "imap.example.com",
+    "user": "name@example.com"
+  },
+  "password_show": "Show",
+  "password_hide": "Hide",
+  "status": {
+    "neutral": "Not checked yet",
+    "checking": "Checking connection…",
+    "success": "Connected"
+  },
+  "validation": {
+    "required": "Please fill in all fields.",
+    "port": "Port must be a number from 1 to 65535."
+  },
+  "button_checking": "Checking…",
+  "button_stopping": "Stopping…",
+  "details_show": "Show details",
+  "details_hide": "Hide details",
+  "banner": {
+    "idle": "Ready",
+    "idle_detail": "Enter both mailboxes, then start the migration.",
+    "blocked": "Can't start yet",
+    "blocked_detail": "Fix the highlighted mailbox first.",
+    "checking": "Checking connections…",
+    "checking_detail": "This can take up to 20 seconds.",
+    "running": "Migration running…",
+    "running_detail": "Press Stop to cancel. Open the details to follow the log.",
+    "stopping": "Stopping…",
+    "stopping_detail": "",
+    "success": "Migration completed",
+    "success_detail": "imapsync finished without errors.",
+    "failure": "Migration failed (code {code})",
+    "failure_detail": "See the details below for the cause.",
+    "stopped": "Migration stopped",
+    "stopped_detail": "You can start again at any time; messages already copied are skipped."
+  }
 }

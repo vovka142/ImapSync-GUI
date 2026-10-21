@@ -2,10 +2,15 @@ import tkinter as tk
 import threading
 from queue import Empty, Queue
 from tkinter import scrolledtext
+from app.Theme import Fonts, Theme
 
 class OutputBox:
     def __init__(self, parent: tk.Widget, height=20, width=100, max_lines=5000):
-        self.text = scrolledtext.ScrolledText(parent, height=height, width=width, font=("Courier", 10), wrap="word", state="disabled")
+        self.text = scrolledtext.ScrolledText(
+            parent, height=height, width=width, font=Fonts.mono_font(10), wrap="word", state="disabled",
+            bg=Theme.LOG_BG, fg=Theme.LOG_FG, relief="flat", padx=12, pady=10,
+            highlightthickness=1, highlightbackground=Theme.LINE,
+        )
         self.text.grid()
         self.max_lines = max_lines
         self._pending_messages: Queue[str] = Queue()

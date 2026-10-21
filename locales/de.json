@@ -1,25 +1,61 @@
 {
   "sections": {
     "source": "Quell-Postfach",
-    "target": "Ziel-Postfach",
-    "output": "Migrationsprotokolle"
+    "target": "Ziel-Postfach"
   },
-
   "fields": {
     "host": "Host",
     "port": "Port",
     "user": "Benutzer",
     "password": "Passwort"
   },
-
   "button_start": "Migration starten",
   "button_stop": "Stoppen",
   "button_clear": "Protokoll löschen",
-
-  "check_failed": "Verbindungsprüfung fehlgeschlagen. Bitte überprüfe die Zugangsdaten.",
+  "check_imapsync_missing": "imapsync wurde nicht gefunden. Bitte installieren und sicherstellen, dass es im PATH liegt.",
+  "check_timeout": "Zeitüberschreitung bei der Verbindung zu {host}:{port}.",
+  "check_failed_detail": "Anmeldung fehlgeschlagen: {detail}",
   "migration_starting": "Migration wird gestartet...",
   "migration_stopping": "Migration wird gestoppt...",
   "migration_stopped": "Migration gestoppt.",
   "migration_success": "Migration erfolgreich abgeschlossen.",
-  "migration_failed": "Migration fehlgeschlagen."
+  "migration_failed": "Migration fehlgeschlagen.",
+  "app_subtitle": "Kopiert ein Postfach von einem IMAP-Server auf einen anderen.",
+  "placeholders": {
+    "host": "imap.beispiel.de",
+    "user": "name@beispiel.de"
+  },
+  "password_show": "Anzeigen",
+  "password_hide": "Verbergen",
+  "status": {
+    "neutral": "Noch nicht geprüft",
+    "checking": "Verbindung wird geprüft…",
+    "success": "Verbunden"
+  },
+  "validation": {
+    "required": "Bitte alle Felder ausfüllen.",
+    "port": "Der Port muss eine Zahl von 1 bis 65535 sein."
+  },
+  "button_checking": "Prüfe…",
+  "button_stopping": "Stoppe…",
+  "details_show": "Details anzeigen",
+  "details_hide": "Details ausblenden",
+  "banner": {
+    "idle": "Bereit",
+    "idle_detail": "Beide Postfächer eintragen und dann die Migration starten.",
+    "blocked": "Start noch nicht möglich",
+    "blocked_detail": "Bitte zuerst das markierte Postfach korrigieren.",
+    "checking": "Verbindungen werden geprüft…",
+    "checking_detail": "Das kann bis zu 20 Sekunden dauern.",
+    "running": "Migration läuft…",
+    "running_detail": "Mit Stoppen abbrechen. Die Details zeigen das Protokoll.",
+    "stopping": "Wird gestoppt…",
+    "stopping_detail": "",
+    "success": "Migration abgeschlossen",
+    "success_detail": "imapsync wurde ohne Fehler beendet.",
+    "failure": "Migration fehlgeschlagen (Code {code})",
+    "failure_detail": "Die Ursache steht in den Details unten.",
+    "stopped": "Migration gestoppt",
+    "stopped_detail": "Du kannst jederzeit neu starten; bereits kopierte Nachrichten werden übersprungen."
+  }
 }
