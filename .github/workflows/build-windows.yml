@@ -42,13 +42,20 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           cpanm --version
-          cpanm --notest App::cpanminus Test::More Test2::Suite Authen::NTLM Compress::Zlib Crypt::OpenSSL::RSA Data::Uniqid Digest::HMAC Digest::HMAC_MD5 Email::Address Encode::IMAPUTF7 File::Copy::Recursive File::Tail HTTP::Daemon HTTP::Daemon::SSL HTTP::Request HTTP::Response HTTP::Status URI IO::Socket::INET6 IO::Socket::SSL IO::Tee JSON JSON::WebToken JSON::WebToken::Crypt::RSA HTML::Entities LWP::UserAgent Mail::IMAPClient Module::Implementation Module::Runtime Module::ScanDeps Net::Server Net::SSLeay Net::DNS Package::Stash Package::Stash::XS PAR::Packer Parse::RecDescent Proc::ProcessTable Readonly Regexp::Common Sys::MemInfo Term::ReadKey Try::Tiny Unicode::String
+          cpanm --notest App::cpanminus Authen::NTLM Compress::Zlib Crypt::OpenSSL::RSA Data::Uniqid Digest::HMAC Digest::HMAC_MD5 Email::Address Encode::IMAPUTF7 File::Copy::Recursive File::Tail HTTP::Daemon HTTP::Daemon::SSL HTTP::Request HTTP::Response HTTP::Status URI IO::Socket::INET6 IO::Socket::SSL IO::Tee JSON JSON::WebToken JSON::WebToken::Crypt::RSA HTML::Entities LWP::UserAgent Mail::IMAPClient Module::Implementation Module::Runtime Module::ScanDeps Net::Server Net::SSLeay Net::DNS Package::Stash Package::Stash::XS PAR::Packer Parse::RecDescent Proc::ProcessTable Readonly Regexp::Common Sys::MemInfo Term::ReadKey Try::Tiny Unicode::String
 
       - name: Проверить исходный код и собрать imapsync.exe
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           Set-Location upstream
+          # Test::More нужен только для --tests и не должен загружаться при обычной работе.
+          # В upstream он подключается глобально, из-за чего PAR требует всю цепочку Test2.
+          $source = Get-Content .\imapsync -Raw
+          $testImport = 'use Test::More ;'
+          if (-not $source.Contains($testImport)) { throw 'Не найдена ожидаемая строка подключения Test::More в upstream imapsync' }
+          $source = $source.Replace($testImport, '# Test::More отключён в portable-сборке: тесты не используются при переносе почты.')
+          Set-Content -Path .\imapsync -Value $source -Encoding utf8
           perl -c .\imapsync
           New-Item -ItemType Directory -Force -Path ..\gui\vendor\imapsync | Out-Null
           $modules = @(
@@ -64,7 +71,6 @@ jobs:
             'Package::Stash', 'Package::Stash::XS', 'Parse::RecDescent',
             'Proc::ProcessTable', 'Readonly', 'Regexp::Common', 'Sys::MemInfo',
             'Term::ReadKey', 'Try::Tiny', 'Unicode::String',
-            'Test::More', 'Test2::Event::V2', 'Test2::Event::Pass', 'Test2::Event::Fail'
           )
           $ppArgs = @('-o', '..\gui\vendor\imapsync\imapsync.exe')
           foreach ($module in $modules) { $ppArgs += @('-M', $module) }
