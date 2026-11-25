@@ -55,70 +55,12 @@ jobs:
           $testImport = 'use Test::More ;'
           if (-not $source.Contains($testImport)) { throw 'Не найдена ожидаемая строка подключения Test::More в upstream imapsync' }
           $source = $source.Replace($testImport, '# Test::More отключён в portable-сборке: тесты не используются при переносе почты.')
-          # Удаляем три вызова skip из тестовых подпрограмм. Все они находятся в ветках,
-          # недостижимых при обычном запуске, и требуют импорта Test::More.
-          $skipPattern = '(?m)^([ \t]*)skip ''No test in normal run''(?: if \( ! \$mysync->\{ tests \} \))? ;[ \t]*
-          perl -c .\imapsync
-          if ($LASTEXITCODE -ne 0) { throw 'Проверка синтаксиса Perl завершилась ошибкой' }
-          New-Item -ItemType Directory -Force -Path ..\gui\vendor\imapsync | Out-Null
-          $modules = @(
-            'Authen::NTLM', 'Compress::Zlib', 'Crypt::OpenSSL::RSA',
-            'Data::Uniqid', 'Digest::HMAC', 'Digest::HMAC_MD5',
-            'Email::Address', 'Encode::IMAPUTF7', 'File::Copy::Recursive',
-            'File::Tail', 'HTTP::Daemon', 'HTTP::Daemon::SSL',
-            'HTTP::Request', 'HTTP::Response', 'HTTP::Status', 'URI',
-            'IO::Socket::INET6', 'IO::Socket::SSL', 'IO::Tee', 'JSON',
-            'JSON::WebToken', 'JSON::WebToken::Crypt::RSA', 'HTML::Entities',
-            'LWP::UserAgent', 'Mail::IMAPClient', 'Module::Implementation',
-            'Module::Runtime', 'Net::Server', 'Net::SSLeay', 'Net::DNS',
-            'Package::Stash', 'Package::Stash::XS', 'Parse::RecDescent',
-            'Proc::ProcessTable', 'Readonly', 'Regexp::Common', 'Sys::MemInfo',
-            'Term::ReadKey', 'Try::Tiny', 'Unicode::String'
-          )
-          $ppArgs = @('-o', '..\gui\vendor\imapsync\imapsync.exe')
-          foreach ($module in $modules) { $ppArgs += @('-M', $module) }
-          $ppArgs += '.\imapsync'
-          pp @ppArgs
-          if ($LASTEXITCODE -ne 0) { throw 'PAR::Packer не смог собрать imapsync.exe' }
-          Set-Location ..\gui
-          .\vendor\imapsync\imapsync.exe --version
-          if ($LASTEXITCODE -ne 0) { throw 'Проверка imapsync.exe завершилась ошибкой' }
-
-      - name: Установить PyInstaller
-        shell: pwsh
-        run: |
-          Set-Location gui
-          python -m pip install --upgrade pip pyinstaller
-          python -m pip install -r requirements.txt
-
-      - name: Собрать русскоязычный GUI с imapsync внутри
-        shell: pwsh
-        run: |
-          Set-Location gui
-          python -m compileall -q main.py app
-          python -m json.tool locales/ru.json | Out-Null
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ImapSync-GUI-RU --add-data "locales;locales" --add-binary "vendor/imapsync/imapsync.exe;imapsync" main.py
-          New-Item -ItemType Directory -Force -Path package | Out-Null
-          Copy-Item dist/ImapSync-GUI-RU.exe package/
-          Compress-Archive -Path package/* -DestinationPath ImapSync-GUI-RU-Windows-x64.zip -Force
-
-      - name: Загрузить готовый комплект
-        uses: actions/upload-artifact@v4
-        with:
-          name: ImapSync-GUI-RU-Windows-x64
-          path: gui/ImapSync-GUI-RU-Windows-x64.zip
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Приложить архив к GitHub Release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: gui/ImapSync-GUI-RU-Windows-x64.zip
-
-          $skipMatches = [regex]::Matches($source, $skipPattern)
-          if ($skipMatches.Count -ne 3) { throw "Ожидалось 3 тестовых вызова skip, найдено: $($skipMatches.Count)" }
-          $source = [regex]::Replace($source, $skipPattern, '$1# Test::More skip отключён: тестовая ветка не используется в portable-сборке.')
+          # Удаляем три вызова skip из тестовых подпрограмм: эти ветки недостижимы
+          # при обычном запуске и требуют импорта Test::More.
+          $lines = $source -split "`r?`n"
+          $skipLines = @($lines | Where-Object { $_ -match "^\s*skip 'No test in normal run'" })
+          if ($skipLines.Count -ne 3) { throw "Ожидалось 3 тестовых вызова skip, найдено: $($skipLines.Count)" }
+          $source = ($lines | Where-Object { $_ -notmatch "^\s*skip 'No test in normal run'" }) -join "`n"
           [System.IO.File]::WriteAllText((Join-Path (Get-Location) 'imapsync'), $source, [System.Text.UTF8Encoding]::new($false))
           perl -c .\imapsync
           if ($LASTEXITCODE -ne 0) { throw 'Проверка синтаксиса Perl завершилась ошибкой' }
