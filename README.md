@@ -1,38 +1,33 @@
-## IMAPSync GUI
+# ImapSync-GUI — русская версия
 
-I constantly need to migrate email inboxes between servers - a tedious task. I struggled to find a free and satisfactory 
-solution which could save stress and time.
+Русифицированная версия графической оболочки [jnloos/ImapSync-GUI](https://github.com/jnloos/ImapSync-GUI).
 
-That's when I discovered the reliable [Imapsync](https://github.com/imapsync/imapsync) console tool. Still, I missed 
-the convenience of a visual interface. This is why I developed this minimalistic user interface that allows you to 
-transfer IMAP folders with a few clicks and graphical feedback.
+## Что изменено
+- Русский язык включён по умолчанию.
+- Добавлена локализация интерфейса: `locales/ru.json`.
+- Английский и немецкий языки сохранены (запуск с аргументом `en` или `de`).
+- Добавлена автоматическая сборка Windows x64 EXE через GitHub Actions.
 
-![IMAPSync GUI Screenshot](media/screenshot.png)
+## Скачать EXE
+Откройте **Actions → Сборка Windows EXE**, выберите последний успешный запуск и скачайте артефакт
+`ImapSync-GUI-RU-Windows-x64`. При публикации GitHub Release EXE автоматически прикладывается к релизу.
 
-## Requirements
+## Локальная сборка Windows 10/11
+Требуется Python 3.10+ с Tkinter и установленный PyInstaller:
 
-Requires Python 3.8 or higher and the Imapsync command-line tool installed and available in your PATH.
-
-## Using the Script
-
-To launch the GUI in development mode, run:
-
-```bash
-python main.py [lang]
+```powershell
+python -m pip install --upgrade pyinstaller
+python -m PyInstaller --noconfirm --clean --onefile --windowed --name ImapSync-GUI-RU --add-data "locales;locales" main.py
 ```
 
-The optional `lang` parameter loads translations from the `/locales` directory (currently `en` and `de`). New
-languages can be added simply by dropping further translation files into `/locales`.
+Готовый файл: `dist\ImapSync-GUI-RU.exe`.
 
-## Using the Binaries
+## Важно: imapsync
+Программа является графической оболочкой. Для фактического переноса почты требуется отдельный исполняемый
+`imapsync`, доступный через PATH. Он и его Perl-зависимости не входят в EXE. Проверьте установку командой
+`imapsync --version`.
 
-Alternatively, you can use the pre-compiled executables located in the `./bin` directory. These binaries are 
-self-contained and do not require a Python installation to run.
+Перед переносом рабочих ящиков проверьте настройки на тестовых учётных записях.
 
-```bash
-# For Linux:
-./ImapSync-GUI [lang]
-
-# For Windows:
-.\ImapSync-GUI.exe [lang]
-```
+## Лицензия
+Сохранена MIT License исходного проекта. См. файл `LICENSE`.
