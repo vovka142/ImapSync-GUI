@@ -16,23 +16,14 @@
 
 При публикации GitHub Release архив автоматически прикладывается к релизу.
 
-## Как встроить imapsync.exe
+## Сборка движка imapsync из исходников
 
-Положите 64-битный Windows-бинарник `imapsync.exe` в каталог:
+GitHub Actions самостоятельно получает актуальные исходники [imapsync/imapsync](https://github.com/imapsync/imapsync), устанавливает Strawberry Perl и Perl-зависимости, затем собирает автономный `imapsync.exe` через PAR::Packer. Готовый движок встраивается внутрь русифицированного GUI через PyInstaller.
 
-```
-vendor/imapsync/imapsync.exe
-```
+Никакой предварительной загрузки бинарника и ручной установки Perl на компьютере пользователя не требуется. Запустите **Actions → Сборка ImapSync-GUI и движка imapsync** и скачайте артефакт `ImapSync-GUI-RU-Windows-x64` после успешного выполнения.
 
-После этого запустите сборку GitHub Actions. Workflow добавит бинарник внутрь PyInstaller EXE; приложение извлечёт его во временный каталог при запуске и использует автоматически.
+Сборка берёт текущую ветку `master` upstream-проекта. Исходный код imapsync распространяется под [NO LIMIT PUBLIC LICENSE](https://github.com/imapsync/imapsync/blob/master/LICENSE).
 
-Официальная инструкция imapsync описывает Windows-бинарник как автономный файл со встроенными Perl и Perl-модулями: [README_Windows.txt](https://github.com/imapsync/imapsync/blob/master/README_Windows.txt). Не включайте в публичный репозиторий бинарник из платного дистрибутива без проверки условий его распространения. Исходный код imapsync публикуется под NO LIMIT PUBLIC LICENSE.
-
-Если встроенного файла нет, программа продолжит искать `imapsync.exe` в `PATH`. Проверка из командной строки:
-
-```powershell
-imapsync.exe --version
-```
 
 ## Локальная сборка GUI без встроенного движка
 
