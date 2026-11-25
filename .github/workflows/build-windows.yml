@@ -55,8 +55,9 @@ jobs:
           $testImport = 'use Test::More ;'
           if (-not $source.Contains($testImport)) { throw 'Не найдена ожидаемая строка подключения Test::More в upstream imapsync' }
           $source = $source.Replace($testImport, '# Test::More отключён в portable-сборке: тесты не используются при переносе почты.')
-          Set-Content -Path .\imapsync -Value $source -Encoding utf8
+          [System.IO.File]::WriteAllText((Join-Path (Get-Location) 'imapsync'), $source, [System.Text.UTF8Encoding]::new($false))
           perl -c .\imapsync
+          if ($LASTEXITCODE -ne 0) { throw 'Проверка синтаксиса Perl завершилась ошибкой' }
           New-Item -ItemType Directory -Force -Path ..\gui\vendor\imapsync | Out-Null
           $modules = @(
             'Authen::NTLM', 'Compress::Zlib', 'Crypt::OpenSSL::RSA',
@@ -70,7 +71,7 @@ jobs:
             'Module::Runtime', 'Net::Server', 'Net::SSLeay', 'Net::DNS',
             'Package::Stash', 'Package::Stash::XS', 'Parse::RecDescent',
             'Proc::ProcessTable', 'Readonly', 'Regexp::Common', 'Sys::MemInfo',
-            'Term::ReadKey', 'Try::Tiny', 'Unicode::String',
+            'Term::ReadKey', 'Try::Tiny', 'Unicode::String'
           )
           $ppArgs = @('-o', '..\gui\vendor\imapsync\imapsync.exe')
           foreach ($module in $modules) { $ppArgs += @('-M', $module) }
