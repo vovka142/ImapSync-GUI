@@ -55,12 +55,10 @@ jobs:
           $testImport = 'use Test::More ;'
           if (-not $source.Contains($testImport)) { throw 'Не найдена ожидаемая строка подключения Test::More в upstream imapsync' }
           $source = $source.Replace($testImport, '# Test::More отключён в portable-сборке: тесты не используются при переносе почты.')
-          # Удаляем три вызова skip из тестовых подпрограмм: эти ветки недостижимы
-          # при обычном запуске и требуют импорта Test::More.
-          $lines = $source -split "`r?`n"
-          $skipLines = @($lines | Where-Object { $_ -match "^\s*skip 'No test in normal run'" })
-          if ($skipLines.Count -ne 3) { throw "Ожидалось 3 тестовых вызова skip, найдено: $($skipLines.Count)" }
-          $source = ($lines | Where-Object { $_ -notmatch "^\s*skip 'No test in normal run'" }) -join "`n"
+          # Удаляем тестовые вызовы skip: они относятся только к отключённому режиму тестирования.
+          $skipPattern = "(?m)^([ `t]*)skip 'No test in normal run'.*$"
+          $source = [regex]::Replace($source, $skipPattern, '$1# Тестовый вызов Test::More пропущен в portable-сборке.')
+          if ($source.Contains("skip 'No test in normal run'")) { throw 'Не удалось удалить тестовые вызовы skip' }
           [System.IO.File]::WriteAllText((Join-Path (Get-Location) 'imapsync'), $source, [System.Text.UTF8Encoding]::new($false))
           perl -c .\imapsync
           if ($LASTEXITCODE -ne 0) { throw 'Проверка синтаксиса Perl завершилась ошибкой' }
