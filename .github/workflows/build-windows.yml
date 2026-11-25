@@ -63,7 +63,8 @@ jobs:
             'Module::Runtime', 'Net::Server', 'Net::SSLeay', 'Net::DNS',
             'Package::Stash', 'Package::Stash::XS', 'Parse::RecDescent',
             'Proc::ProcessTable', 'Readonly', 'Regexp::Common', 'Sys::MemInfo',
-            'Term::ReadKey', 'Try::Tiny', 'Unicode::String'
+            'Term::ReadKey', 'Try::Tiny', 'Unicode::String',
+            'Test::More', 'Test2::Event::Pass'
           )
           $ppArgs = @('-o', '..\gui\vendor\imapsync\imapsync.exe')
           foreach ($module in $modules) { $ppArgs += @('-M', $module) }
