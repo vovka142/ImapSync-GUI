@@ -21,12 +21,13 @@ class ImapSyncWindow:
         self._stop_requested = False
         self._state = "idle"
         Fonts.load()
-        self.root.title("IMAPSync")
-        self.root.minsize(860, 0)
+        self.root.title("IMAPSync — перенос почты")
+        self.root.geometry("1120x790")
+        self.root.minsize(940, 700)
         self.root.configure(bg=Theme.PAPER)
 
-        # Main container
-        self.container = tk.Frame(self.root, bg=Theme.PAPER, padx=28, pady=24)
+        # Основная рабочая область
+        self.container = tk.Frame(self.root, bg=Theme.PAPER, padx=34, pady=30)
         self.container.pack(fill="both", expand=True)
         self.container.grid_columnconfigure(0, weight=1)
         self.container.grid_rowconfigure(5, weight=1)
@@ -39,10 +40,20 @@ class ImapSyncWindow:
 
     def __build_header(self):
         header = tk.Frame(self.container, bg=Theme.PAPER)
-        header.grid(row=0, column=0, sticky="w", pady=(0, 18))
-        tk.Label(header, text="IMAPSync", font=Fonts.ui_font(20, bold=True), bg=Theme.PAPER, fg=Theme.INK).pack(anchor="w")
-        tk.Label(header, text=__("app_subtitle"), font=Fonts.ui_font(10), bg=Theme.PAPER, fg=Theme.MUTED).pack(anchor="w")
-        tk.Frame(header, bg=Theme.ACCENT, height=3, width=48).pack(anchor="w", pady=(8, 0))
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 28))
+        header.grid_columnconfigure(1, weight=1)
+
+        mark = tk.Frame(header, bg=Theme.ACCENT, width=48, height=48)
+        mark.grid(row=0, column=0, rowspan=2, sticky="w", padx=(0, 14))
+        mark.grid_propagate(False)
+        tk.Label(mark, text="IM", font=Fonts.ui_font(16, bold=True), bg=Theme.ACCENT, fg="#FFFFFF").place(relx=0.5, rely=0.5, anchor="center")
+
+        tk.Label(header, text="IMAPSync", font=Fonts.ui_font(23, bold=True), bg=Theme.PAPER, fg=Theme.INK).grid(row=0, column=1, sticky="sw")
+        tk.Label(header, text=__("app_subtitle"), font=Fonts.ui_font(10), bg=Theme.PAPER, fg=Theme.MUTED).grid(row=1, column=1, sticky="nw", pady=(2, 0))
+
+        pill = tk.Frame(header, bg="#EAE9FF", padx=12, pady=7)
+        pill.grid(row=0, column=2, rowspan=2, sticky="e")
+        tk.Label(pill, text="MAIL TRANSFER", font=Fonts.ui_font(8, bold=True), bg="#EAE9FF", fg=Theme.ACCENT).pack()
 
     def __build_forms(self):
         forms_frame = tk.Frame(self.container, bg=Theme.PAPER)
@@ -56,11 +67,11 @@ class ImapSyncWindow:
 
     @staticmethod
     def __build_card(parent: tk.Widget, column: int, title_key: str) -> tuple[CredentialForm, StatusIndicator]:
-        card = tk.Frame(parent, bg=Theme.CARD, highlightthickness=1, highlightbackground=Theme.LINE, highlightcolor=Theme.LINE, padx=18, pady=16)
+        card = tk.Frame(parent, bg=Theme.CARD, highlightthickness=1, highlightbackground=Theme.LINE, highlightcolor=Theme.LINE, padx=22, pady=22)
         card.grid(row=0, column=column, sticky="nsew")
         card.grid_columnconfigure(0, weight=1)
 
-        tk.Label(card, text=__(title_key), font=Fonts.ui_font(11, bold=True), bg=Theme.CARD, fg=Theme.INK).grid(row=0, column=0, sticky="w", pady=(0, 6))
+        tk.Label(card, text=__(title_key), font=Fonts.ui_font(12, bold=True), bg=Theme.CARD, fg=Theme.INK).grid(row=0, column=0, sticky="w", pady=(0, 12))
         form = CredentialForm(card, ["host", "port", "user", "password"])
         form.grid(row=1, column=0, sticky="ew")
         status = StatusIndicator(card, row=2, column=0, sticky="w", pady=(8, 0))
@@ -68,7 +79,7 @@ class ImapSyncWindow:
 
     def __build_actions(self):
         actions = tk.Frame(self.container, bg=Theme.PAPER)
-        actions.grid(row=2, column=0, sticky="w", pady=(16, 14))
+        actions.grid(row=2, column=0, sticky="ew", pady=(22, 16))
         self.action_button = self.__make_button(actions, __("button_start"), self.__start_sync, Theme.ACCENT, "white", 11, bold=True)
         self.action_button.pack(side="left")
 
@@ -77,11 +88,11 @@ class ImapSyncWindow:
 
     def __build_output(self):
         bar = tk.Frame(self.container, bg=Theme.PAPER)
-        bar.grid(row=4, column=0, sticky="ew", pady=(14, 6))
+        bar.grid(row=4, column=0, sticky="ew", pady=(20, 8))
         self.details_button = tk.Button(
             bar, command=lambda: self.__set_details_visible(not self._details_visible), font=Fonts.ui_font(10, bold=True),
             relief="flat", bg=Theme.PAPER, fg=Theme.INK, activebackground=Theme.PAPER, activeforeground=Theme.INK,
-            highlightthickness=2, highlightbackground=Theme.PAPER, highlightcolor=Theme.FOCUS, cursor="hand2",
+            highlightthickness=0, cursor="hand2",
         )
         self.details_button.pack(side="left")
         self.__make_button(bar, __("button_clear"), self.__clear_output, Theme.SECONDARY, Theme.INK, 9).pack(side="right")
@@ -94,8 +105,8 @@ class ImapSyncWindow:
     def __make_button(parent: tk.Widget, text: str, command, bg: str, fg: str, size: int, bold: bool = False) -> tk.Button:
         return tk.Button(
             parent, text=text, command=command, font=Fonts.ui_font(size, bold), bg=bg, fg=fg,
-            activebackground=bg, activeforeground=fg, relief="flat", padx=20 if bold else 12, pady=8 if bold else 4,
-            highlightthickness=2, highlightbackground=parent.cget("bg"), highlightcolor=Theme.FOCUS, cursor="hand2",
+            activebackground=bg, activeforeground=fg, relief="flat", padx=22 if bold else 14, pady=11 if bold else 6,
+            highlightthickness=0, cursor="hand2",
         )
 
     def __set_details_visible(self, visible: bool):
