@@ -1,0 +1,54 @@
+name: Сборка Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '**.py'
+      - 'locales/**'
+      - '.github/workflows/build-windows.yml'
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Получить исходный код
+        uses: actions/checkout@v4
+
+      - name: Установить Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Проверить исходники и локализацию
+        shell: pwsh
+        run: |
+          python -m compileall -q main.py app
+          python -m json.tool locales/ru.json | Out-Null
+
+      - name: Установить PyInstaller
+        run: python -m pip install --upgrade pip pyinstaller
+
+      - name: Собрать EXE
+        shell: pwsh
+        run: |
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ImapSync-GUI-RU --add-data "locales;locales" main.py
+
+      - name: Загрузить EXE как артефакт
+        uses: actions/upload-artifact@v4
+        with:
+          name: ImapSync-GUI-RU-Windows-x64
+          path: dist/ImapSync-GUI-RU.exe
+          if-no-files-found: error
+
+      - name: Приложить EXE к GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/ImapSync-GUI-RU.exe
