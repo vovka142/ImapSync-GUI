@@ -93,7 +93,7 @@ class BatchMigrationWindow:
         table_frame.grid_columnconfigure(0, weight=1)
         table_frame.grid_rowconfigure(0, weight=1)
         self.table = ttk.Treeview(
-            table_frame, columns=("source", "target", "status", "details"),
+            table_frame, columns=("label", "source", "target", "status", "details"),
             show="headings", height=9,
         )
         for column, title, width in (
