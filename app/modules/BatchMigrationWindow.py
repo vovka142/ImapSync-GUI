@@ -363,11 +363,16 @@ class BatchMigrationWindow:
         if self.stop_event.is_set():
             process.terminate()
 
+        output_tail: list[str] = []
         try:
             if process.stdout:
                 for line in process.stdout:
-                    if line.strip():
-                        self.__log_threadsafe(f"[{job['source_user']}] {line.rstrip()}")
+                    clean_line = line.rstrip()
+                    if clean_line:
+                        output_tail.append(clean_line)
+                        if len(output_tail) > 30:
+                            output_tail.pop(0)
+                        self.__log_threadsafe(f"[{job['source_user']}] {clean_line}")
             returncode = process.wait()
         finally:
             with self.process_lock:
@@ -378,7 +383,11 @@ class BatchMigrationWindow:
         elif returncode == 0:
             status, details = "Успешно", "Перенос завершён"
         else:
-            status, details = "Ошибка", f"Код завершения: {returncode}"
+            diagnostic = "\\n".join(output_tail[-10:])
+            details = f"Код завершения: {returncode}"
+            if diagnostic:
+                details += f"\\nВывод imapsync:\\n{diagnostic}"
+            status = "Ошибка"
 
         self.__set_row_threadsafe(index, status, details)
         with self.results_lock:
