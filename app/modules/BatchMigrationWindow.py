@@ -25,7 +25,9 @@ class BatchMigrationWindow:
 
         self.jobs: list[dict[str, str]] = []
         self.results: dict[int, dict[str, str]] = {}
+        self.results_lock = threading.Lock()
         self.csv_path = ""
+        self.batch_settings = None
         self.stop_event = threading.Event()
         self.process_lock = threading.Lock()
         self.processes: dict[int, object] = {}
@@ -57,15 +59,15 @@ class BatchMigrationWindow:
                            highlightthickness=1, highlightbackground=Theme.LINE)
         servers.grid(row=1, column=0, sticky="ew")
         servers.grid_columnconfigure(1, weight=1)
-        servers.grid_columnconfigure(4, weight=1)
+        servers.grid_columnconfigure(5, weight=1)
         tk.Label(servers, text="Исходный сервер", font=Fonts.ui_font(10, bold=True),
-                 bg=Theme.CARD, fg=Theme.INK).grid(row=0, column=0, columnspan=2, sticky="w")
+                 bg=Theme.CARD, fg=Theme.INK).grid(row=0, column=0, columnspan=4, sticky="w")
         tk.Label(servers, text="Целевой сервер", font=Fonts.ui_font(10, bold=True),
-                 bg=Theme.CARD, fg=Theme.INK).grid(row=0, column=3, columnspan=2, sticky="w")
+                 bg=Theme.CARD, fg=Theme.INK).grid(row=0, column=4, columnspan=4, sticky="w")
         self.__server_field(servers, 1, 0, "Хост", self.source_host)
         self.__server_field(servers, 1, 2, "Порт", self.source_port, width=7)
-        self.__server_field(servers, 1, 3, "Хост", self.target_host)
-        self.__server_field(servers, 1, 5, "Порт", self.target_port, width=7)
+        self.__server_field(servers, 1, 4, "Хост", self.target_host)
+        self.__server_field(servers, 1, 6, "Порт", self.target_port, width=7)
 
         csv_bar = tk.Frame(outer, bg=Theme.PAPER)
         csv_bar.grid(row=2, column=0, sticky="ew", pady=(12, 8))
@@ -213,6 +215,13 @@ class BatchMigrationWindow:
             return
 
         self.stop_event.clear()
+        self.batch_settings = {
+            "source_host": self.source_host.get().strip(),
+            "source_port": self.source_port.get().strip(),
+            "target_host": self.target_host.get().strip(),
+            "target_port": self.target_port.get().strip(),
+            "workers": 3 if self.mode.get() == "parallel" else 1,
+        }
         self.running = True
         self.start_button.config(state="disabled")
         self.stop_button.config(state="normal")
@@ -223,8 +232,9 @@ class BatchMigrationWindow:
         threading.Thread(target=self.__preflight_and_run, daemon=True).start()
 
     def __preflight_and_run(self):
-        source_host, source_port = self.source_host.get().strip(), self.source_port.get().strip()
-        target_host, target_port = self.target_host.get().strip(), self.target_port.get().strip()
+        settings = self.batch_settings
+        source_host, source_port = settings["source_host"], settings["source_port"]
+        target_host, target_port = settings["target_host"], settings["target_port"]
         ready: list[int] = []
 
         # PAR::Packer использует общий кэш распаковки. Предварительные проверки
@@ -240,7 +250,15 @@ class BatchMigrationWindow:
                 self.__set_row_threadsafe(index, "Готов к переносу", "Подключение успешно")
                 self.__log_threadsafe(f"[{job['source_user']}] Проверка подключения пройдена.")
             except Exception as error:
-                self.__set_row_threadsafe(index, "Ошибка проверки", str(error)[:500])
+                details = str(error)[:500]
+                self.__set_row_threadsafe(index, "Ошибка проверки", details)
+                with self.results_lock:
+                    self.results[index] = {
+                        "source_user": job["source_user"],
+                        "target_user": job["target_user"],
+                        "status": "Ошибка проверки",
+                        "details": details,
+                    }
                 self.__log_threadsafe(f"[{job['source_user']}] Ошибка проверки: {error}")
 
             self.__set_progress_threadsafe(f"Проверка ящиков: {index + 1}/{len(self.jobs)}")
@@ -252,7 +270,7 @@ class BatchMigrationWindow:
             self.__finish_threadsafe("Нет ящиков с успешно проверенными учётными данными.")
             return
 
-        workers = 3 if self.mode.get() == "parallel" else 1
+        workers = settings["workers"]
         mode_name = "параллельный (до 3 одновременно)" if workers == 3 else "последовательный"
         self.__log_threadsafe(f"Проверка завершена. Запуск режима: {mode_name}.")
         self.__set_progress_threadsafe(f"Перенос: 0/{len(ready)}")
@@ -268,7 +286,15 @@ class BatchMigrationWindow:
                 try:
                     future.result()
                 except Exception as error:
-                    self.__set_row_threadsafe(index, "Ошибка", str(error)[:500])
+                    details = str(error)[:500]
+                    self.__set_row_threadsafe(index, "Ошибка", details)
+                    with self.results_lock:
+                        self.results[index] = {
+                            "source_user": self.jobs[index]["source_user"],
+                            "target_user": self.jobs[index]["target_user"],
+                            "status": "Ошибка",
+                            "details": details,
+                        }
                     self.__log_threadsafe(f"[{self.jobs[index]['source_user']}] Ошибка: {error}")
                 completed += 1
                 self.__set_progress_threadsafe(f"Обработано: {completed}/{len(ready)}")
@@ -322,7 +348,7 @@ class BatchMigrationWindow:
             status, details = "Ошибка", f"Код завершения: {returncode}"
 
         self.__set_row_threadsafe(index, status, details)
-        with threading.Lock():
+        with self.results_lock:
             self.results[index] = {
                 "source_user": job["source_user"],
                 "target_user": job["target_user"],
