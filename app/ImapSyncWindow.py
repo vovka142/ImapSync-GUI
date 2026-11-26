@@ -1,6 +1,5 @@
 import subprocess
 import tkinter as tk
-from concurrent.futures import ThreadPoolExecutor
 from threading import Lock, Thread
 from typing import Optional
 from app.ImapSync import ImapSync
@@ -166,11 +165,12 @@ class ImapSyncWindow:
 
     def __check_credentials(self, cfg: dict[str, str]):
         # Worker thread: no widget access here, results go back through root.after
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            source = pool.submit(self.__check_side, cfg['host1'], cfg['port1'], cfg['user1'], cfg['password1'])
-            target = pool.submit(self.__check_side, cfg['host2'], cfg['port2'], cfg['user2'], cfg['password2'])
-            results = (source.result(), target.result())
-        self.root.after(0, self.__on_checked, *results)
+        # PAR::Packer использует общий временный кэш для одного EXE.
+        # Не запускаем два экземпляра одновременно: параллельная распаковка
+        # одного кэша может завершиться ошибкой Permission denied.
+        source = self.__check_side(cfg['host1'], cfg['port1'], cfg['user1'], cfg['password1'])
+        target = self.__check_side(cfg['host2'], cfg['port2'], cfg['user2'], cfg['password2'])
+        self.root.after(0, self.__on_checked, source, target)
 
     @staticmethod
     def __check_side(host: str, port: str, user: str, password: str) -> Optional[CheckError]:
