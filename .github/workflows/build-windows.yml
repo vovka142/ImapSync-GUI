@@ -92,12 +92,15 @@ jobs:
           @'
           use strict;
           use warnings;
-          use Encode qw(decode);
+          use Encode qw(decode encode);
           use Encode::Unicode;
           use Encode::IMAPUTF7;
           my $actual = decode('IMAP-UTF-7', '~peter/mail/&ZeVnLIqe-/&U,BTFw-');
-          my $expected = "~peter/mail/日本語/台北";
-          die "IMAP-UTF-7 decode test failed: [$actual]\n" unless $actual eq $expected;
+          # Сравниваем UTF-8-байты, чтобы тест не зависел от кодировки исходника.
+          my $actual_utf8_hex = unpack('H*', encode('UTF-8', $actual));
+          my $expected_utf8_hex = '7e70657465722f6d61696c2fe697a5e69cace8aa9e2fe58fb0e58c97';
+          die "IMAP-UTF-7 decode test failed (UTF-8 hex: $actual_utf8_hex)\n"
+            unless $actual_utf8_hex eq $expected_utf8_hex;
           print "IMAP-UTF-7 decode test passed\n";
           '@ | Set-Content -Encoding utf8 .\imaputf7-smoke.pl
           pp_autolink -o .\imaputf7-smoke.exe -M Encode::Unicode -M Encode::IMAPUTF7 .\imaputf7-smoke.pl
