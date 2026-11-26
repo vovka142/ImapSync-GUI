@@ -303,7 +303,7 @@ class BatchMigrationWindow:
             self.__finish_threadsafe("Перенос остановлен пользователем.")
         else:
             successful = sum(1 for result in self.results.values() if result.get("status") == "Успешно")
-            failed = len(ready) - successful
+            failed = len(self.jobs) - successful
             self.__finish_threadsafe(f"Завершено. Успешно: {successful}; с ошибками: {failed}.")
 
     def __config(self, index, source_host, source_port, target_host, target_port):
@@ -415,13 +415,15 @@ class BatchMigrationWindow:
         if not path:
             return
         try:
+            with self.results_lock:
+                export_rows = [self.results[index].copy() for index in sorted(self.results)]
             with open(path, "w", encoding="utf-8-sig", newline="") as stream:
                 writer = csv.DictWriter(
                     stream, fieldnames=("source_user", "target_user", "status", "details")
                 )
                 writer.writeheader()
-                for index in sorted(self.results):
-                    writer.writerow(self.results[index])
+                for result in export_rows:
+                    writer.writerow(result)
             messagebox.showinfo("Экспорт завершён", f"Результаты сохранены:\n{path}", parent=self.window)
         except OSError as error:
             messagebox.showerror("Ошибка экспорта", str(error), parent=self.window)
