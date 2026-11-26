@@ -195,6 +195,7 @@ class BatchMigrationWindow:
         self.progress.set(f"Загружено заданий: {len(jobs)}. Можно запускать перенос.")
         self.__log(f"Загружен файл: {path}")
         self.__log(f"Количество почтовых ящиков: {len(jobs)}")
+        self.__log("ВНИМАНИЕ: CSV содержит пароли в открытом виде. Ограничьте доступ к файлу.")
 
     def __start(self):
         if self.running:
@@ -242,7 +243,6 @@ class BatchMigrationWindow:
         for index, job in enumerate(self.jobs):
             if self.stop_event.is_set():
                 break
-            cfg = self.__config(index, source_host, source_port, target_host, target_port)
             try:
                 ImapSync.check_credentials(source_host, source_port, job["source_user"], job["source_password"])
                 ImapSync.check_credentials(target_host, target_port, job["target_user"], job["target_password"])
@@ -318,6 +318,14 @@ class BatchMigrationWindow:
     def __run_one(self, index, source_host, source_port, target_host, target_port):
         if self.stop_event.is_set():
             self.__set_row_threadsafe(index, "Остановлено", "")
+            job = self.jobs[index]
+            with self.results_lock:
+                self.results[index] = {
+                    "source_user": job["source_user"],
+                    "target_user": job["target_user"],
+                    "status": "Остановлено",
+                    "details": "Не запускалось: остановлено пользователем",
+                }
             return
 
         job = self.jobs[index]
