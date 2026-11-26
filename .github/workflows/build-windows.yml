@@ -9,8 +9,6 @@ on:
       - 'locales/**'
       - '.github/workflows/build-windows.yml'
       - 'build_imapsync.ps1'
-  release:
-    types: [published]
 
 permissions:
   contents: write
@@ -112,8 +110,14 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Приложить архив к GitHub Release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: gui/ImapSync-GUI-RU-Windows-x64.zip
+      - name: Создать GitHub Release и приложить архив
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = "windows-build-$($env:GITHUB_RUN_NUMBER)"
+          $title = "ImapSync-GUI — Windows x64 build $($env:GITHUB_RUN_NUMBER)"
+          gh release create $tag "gui/ImapSync-GUI-RU-Windows-x64.zip" --title $title --notes "Готовая portable-сборка ImapSync-GUI для Windows x64. В архив включён imapsync.exe, собранный из официального исходного кода imapsync/imapsync."
+          if ($LASTEXITCODE -ne 0) { throw 'Не удалось создать GitHub Release или загрузить архив' }
