@@ -97,10 +97,11 @@ class BatchMigrationWindow:
             show="headings", height=9,
         )
         for column, title, width in (
-            ("source", "Исходный ящик", 220),
-            ("target", "Целевой ящик", 220),
-            ("status", "Статус", 150),
-            ("details", "Результат", 300),
+            ("label", "Название", 150),
+            ("source", "Исходный ящик", 200),
+            ("target", "Целевой ящик", 200),
+            ("status", "Статус", 140),
+            ("details", "Результат", 260),
         ):
             self.table.heading(column, text=title)
             self.table.column(column, width=width, minwidth=100, anchor="w")
@@ -190,7 +191,7 @@ class BatchMigrationWindow:
             self.table.delete(item)
         for index, job in enumerate(jobs):
             self.table.insert("", "end", iid=str(index), values=(
-                job["source_user"], job["target_user"], "Ожидание", ""
+                job["label"], job["source_user"], job["target_user"], "Ожидание", ""
             ))
         self.progress.set(f"Загружено заданий: {len(jobs)}. Можно запускать перенос.")
         self.__log(f"Загружен файл: {path}")
@@ -254,6 +255,7 @@ class BatchMigrationWindow:
                 self.__set_row_threadsafe(index, "Ошибка проверки", details)
                 with self.results_lock:
                     self.results[index] = {
+                        "label": job["label"],
                         "source_user": job["source_user"],
                         "target_user": job["target_user"],
                         "status": "Ошибка проверки",
@@ -290,6 +292,7 @@ class BatchMigrationWindow:
                     self.__set_row_threadsafe(index, "Ошибка", details)
                     with self.results_lock:
                         self.results[index] = {
+                            "label": self.jobs[index]["label"],
                             "source_user": self.jobs[index]["source_user"],
                             "target_user": self.jobs[index]["target_user"],
                             "status": "Ошибка",
@@ -321,6 +324,7 @@ class BatchMigrationWindow:
             job = self.jobs[index]
             with self.results_lock:
                 self.results[index] = {
+                    "label": job["label"],
                     "source_user": job["source_user"],
                     "target_user": job["target_user"],
                     "status": "Остановлено",
@@ -358,6 +362,7 @@ class BatchMigrationWindow:
         self.__set_row_threadsafe(index, status, details)
         with self.results_lock:
             self.results[index] = {
+                "label": job["label"],
                 "source_user": job["source_user"],
                 "target_user": job["target_user"],
                 "status": status,
@@ -368,7 +373,7 @@ class BatchMigrationWindow:
     def __set_row(self, index, status, details):
         if self.table.exists(str(index)):
             values = list(self.table.item(str(index), "values"))
-            values[2], values[3] = status, details
+            values[3], values[4] = status, details
             self.table.item(str(index), values=values)
 
     def __set_row_threadsafe(self, index, status, details):
@@ -427,7 +432,7 @@ class BatchMigrationWindow:
                 export_rows = [self.results[index].copy() for index in sorted(self.results)]
             with open(path, "w", encoding="utf-8-sig", newline="") as stream:
                 writer = csv.DictWriter(
-                    stream, fieldnames=("source_user", "target_user", "status", "details")
+                    stream, fieldnames=("label", "source_user", "target_user", "status", "details")
                 )
                 writer.writeheader()
                 for result in export_rows:
