@@ -64,7 +64,7 @@ jobs:
           $modules = @(
             'Authen::NTLM', 'Compress::Zlib', 'Crypt::OpenSSL::RSA',
             'Data::Uniqid', 'Digest::HMAC', 'Digest::HMAC_MD5',
-            'Email::Address', 'Encode::IMAPUTF7', 'File::Copy::Recursive',
+            'Email::Address', 'Encode::Unicode', 'Encode::IMAPUTF7', 'File::Copy::Recursive',
             'File::Tail', 'HTTP::Daemon', 'HTTP::Daemon::SSL',
             'HTTP::Request', 'HTTP::Response', 'HTTP::Status', 'URI',
             'IO::Socket::INET6', 'IO::Socket::SSL', 'IO::Tee', 'JSON',
@@ -85,6 +85,26 @@ jobs:
           Set-Location ..\gui
           .\vendor\imapsync\imapsync.exe --version
           if ($LASTEXITCODE -ne 0) { throw 'Проверка imapsync.exe завершилась ошибкой' }
+
+          # Проверяем декодирование IMAP-UTF-7 внутри упакованного Perl EXE.
+          # В имени папки используются символы японского и китайского алфавитов,
+          # поэтому тест гарантированно задействует UTF-16BE.
+          @'
+          use strict;
+          use warnings;
+          use Encode qw(decode);
+          use Encode::Unicode;
+          use Encode::IMAPUTF7;
+          my $actual = decode('IMAP-UTF-7', '~peter/mail/&ZeVnLIqe-/&U,BTFw-');
+          my $expected = "~peter/mail/日本語/台北";
+          die "IMAP-UTF-7 decode test failed: [$actual]\n" unless $actual eq $expected;
+          print "IMAP-UTF-7 decode test passed\n";
+          '@ | Set-Content -Encoding utf8 .\imaputf7-smoke.pl
+          pp_autolink -o .\imaputf7-smoke.exe -M Encode::Unicode -M Encode::IMAPUTF7 .\imaputf7-smoke.pl
+          if ($LASTEXITCODE -ne 0) { throw 'Не удалось собрать тест декодирования IMAP-UTF-7' }
+          .\imaputf7-smoke.exe
+          if ($LASTEXITCODE -ne 0) { throw 'Тест декодирования IMAP-UTF-7 завершился ошибкой' }
+          Remove-Item .\imaputf7-smoke.pl, .\imaputf7-smoke.exe -Force
 
       - name: Установить PyInstaller
         shell: pwsh
