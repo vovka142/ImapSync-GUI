@@ -1,60 +1,60 @@
-# Mailcow mailbox provisioning from CSV
+# Массовое создание почтовых ящиков Mailcow из CSV
 
-A small Python utility to create Mailcow mailboxes in bulk through the Mailcow API.
+Python-скрипт для массового создания почтовых ящиков в Mailcow через API.
 
-It was tested with Mailcow Dockerized using the `/api/v1/add/mailbox` endpoint. The script reads existing mailbox names from MySQL (read-only query), skips mailboxes that already exist, and creates the remaining mailboxes through the API. It does **not** insert or update database records directly.
+Скрипт проверен на Mailcow Dockerized с endpoint `/api/v1/add/mailbox`. Существующие адреса он читает из MySQL (только SELECT), пропускает их и создаёт недостающие через API. Прямых записей в базу данных нет.
 
-## Safety notes
+## Безопасность
 
-- Run this only on the Mailcow server, as an administrator with access to Docker Compose and `mailcow.conf`.
-- The script reads `API_KEY` and `DBPASS` from the local `mailcow.conf`; it does not print them.
-- The temporary mailbox password is requested interactively and is not stored in the script or CSV.
-- Do not commit `mailcow.conf`, CSV files, mailbox passwords, API keys, database passwords, or other credentials.
-- The script sets `force_pw_update=1`, so users are required to change the temporary password at first login.
-- The HTTPS connection is made to localhost and certificate verification is disabled for that local connection. The `Host` header is set to the configured Mailcow hostname.
-- Existing mailbox discovery is a read-only SQL query. Mailbox creation is performed only through the Mailcow API.
+- Запускайте скрипт непосредственно на сервере Mailcow от пользователя, имеющего доступ к Docker Compose и файлу `mailcow.conf`.
+- `API_KEY` и `DBPASS` читаются из локального `mailcow.conf`; скрипт их не выводит.
+- Временный пароль запрашивается интерактивно со скрытым вводом и не сохраняется в скрипте или CSV.
+- Не загружайте в GitHub файл `mailcow.conf`, CSV, пароли ящиков, API-ключи, пароль БД и другие секреты.
+- Установлен параметр `force_pw_update=1`: пользователь должен сменить временный пароль при первом входе.
+- HTTPS-соединение устанавливается к localhost; проверка сертификата для этого локального соединения отключена. Имя Mailcow передаётся через HTTP-заголовок `Host`.
+- Список существующих ящиков читается из MySQL запросом SELECT. Создание ящиков выполняется только через Mailcow API.
 
-## Requirements
+## Требования
 
-- Mailcow Dockerized is installed and running.
-- Python 3.8 or newer.
-- Docker Compose v2, with permission to execute `docker compose`.
-- A Mailcow API key with permission to create mailboxes.
-- The API key is enabled in Mailcow and local API access is permitted.
-- A CSV file with a semicolon separator and a `target_user` column.
+- Установленный и работающий Mailcow Dockerized.
+- Python 3.8 или новее.
+- Docker Compose v2 и доступ к команде `docker compose`.
+- API-ключ Mailcow с разрешением на создание почтовых ящиков.
+- В Mailcow включён API, а локальный доступ разрешён в настройках API.
+- CSV с разделителем `; `? Нет — используйте обычную точку с запятой `;` и столбец `target_user`.
 
-Example CSV:
+Пример CSV:
 
 ```csv
 target_user;target_password
-alice@example.org;not-used
-bob@example.org;not-used
+alice@example.org;не-используется
+bob@example.org;не-используется
 ```
 
-The `target_password` column is ignored. Do not put real passwords in this file.
+Столбец `target_password` игнорируется. Не помещайте в CSV реальные пароли.
 
-## Configuration
+## Настройка
 
-The script uses these environment variables. Defaults are suitable only as examples; set the hostname and paths for your installation.
+Скрипт поддерживает переменные окружения:
 
-| Variable | Default | Description |
+| Переменная | Значение по умолчанию | Назначение |
 |---|---|---|
-| `MAILCOW_DIR` | `/opt/mailcow-dockerized` | Directory containing `mailcow.conf` and the Compose project |
-| `MAILBOX_CSV` | `/root/mail-migration/mailboxes.csv` | Input CSV path |
-| `MAILCOW_HOST` | `webmail.example.com` | Mailcow hostname used in the HTTP Host header |
-| `MAILCOW_HTTPS_PORT` | `448` | Local HTTPS port |
-| `MAILBOX_QUOTA_MIB` | `5120` | Mailbox quota in MiB (5120 MiB = 5 GiB) |
+| `MAILCOW_DIR` | `/opt/mailcow-dockerized` | Каталог Mailcow, где находится `mailcow.conf` |
+| `MAILBOX_CSV` | `/root/mail-migration/mailboxes.csv` | Путь к CSV |
+| `MAILCOW_HOST` | `webmail.example.com` | Имя хоста Mailcow для HTTP-заголовка Host |
+| `MAILCOW_HTTPS_PORT` | `448` | Локальный HTTPS-порт |
+| `MAILBOX_QUOTA_MIB` | `5120` | Квота ящика в MiB; 5120 MiB = 5 GiB |
 
-The API key and database password are read from `mailcow.conf`; do not set or paste them into shell commands.
+API-ключ и пароль БД скрипт получает из `mailcow.conf`. Не вставляйте их в команды или исходный код.
 
-## Install and run
+## Установка и запуск
 
-Copy `create_all.py` to the Mailcow server, then set the values for your installation:
+Скопируйте `create_all.py` на сервер Mailcow. Укажите параметры своей установки:
 
 ```bash
 export MAILCOW_DIR="/opt/mailcow-dockerized"
 export MAILBOX_CSV="/root/mail-migration/mailboxes.csv"
-export MAILCOW_HOST="webmail.your-domain.example"
+export MAILCOW_HOST="webmail.ваш-домен.example"
 export MAILCOW_HTTPS_PORT="448"
 export MAILBOX_QUOTA_MIB="5120"
 
@@ -64,26 +64,26 @@ python3 -m py_compile create_all.py
 python3 create_all.py
 ```
 
-The script prompts for one temporary password twice using hidden input. Use a strong password of at least 12 characters and distribute it to users through a secure channel.
+Скрипт дважды запросит временный пароль со скрытым вводом. Используйте сложный пароль длиной не менее 12 символов и передавайте его пользователям по защищённому каналу.
 
-## Behavior
+## Что делает скрипт
 
-1. Validates the CSV header, addresses, and duplicate entries.
-2. Reads the existing mailbox list from the Mailcow MySQL container.
-3. Skips addresses that already exist.
-4. Requests the temporary password interactively.
-5. Creates each missing mailbox through `POST /api/v1/add/mailbox` with:
-   - `local_part` and `domain` (the fields expected by the Mailcow API);
-   - `quota` in MiB;
-   - `active=1`;
-   - `force_pw_update=1`.
-6. Stops on the first API error and prints a summary.
+1. Проверяет заголовок CSV, адреса и отсутствие дубликатов.
+2. Получает список существующих ящиков из MySQL контейнера Mailcow.
+3. Пропускает адреса, которые уже существуют.
+4. Запрашивает временный пароль.
+5. Создаёт каждый отсутствующий ящик через `POST /api/v1/add/mailbox`, передавая:
+   - `local_part` и `domain` — обязательные поля API;
+   - `quota` — квоту в MiB;
+   - `active=1` — активный ящик;
+   - `force_pw_update=1` — смена временного пароля при первом входе.
+6. Останавливается при первой ошибке API и выводит итоговую сводку.
 
-The script can be rerun safely after correcting an error: mailboxes already present in the database are skipped.
+После исправления ошибки скрипт можно запустить повторно: уже созданные ящики будут пропущены.
 
-## Verify the result
+## Проверка результата
 
-Run a read-only query on the Mailcow server:
+На сервере Mailcow выполните запрос только для чтения:
 
 ```bash
 cd /opt/mailcow-dockerized
@@ -93,10 +93,10 @@ docker compose exec mysql-mailcow mysql \
   mailcow -e "SELECT username, active, quota FROM mailbox ORDER BY username;"
 ```
 
-For a 5 GiB mailbox, the stored quota is normally `5368709120` bytes. Confirm that the expected addresses are present, `active=1`, and the quota matches your configured value.
+Для квоты 5 GiB в базе обычно хранится значение `5368709120` байт. Убедитесь, что все ожидаемые адреса присутствуют, `active=1`, а квота соответствует настройке.
 
-## Limitations
+## Ограничения
 
-- This utility creates mailboxes; it does not migrate message contents, contacts, calendars, aliases, or filters.
-- It does not retrieve or migrate users' old passwords.
-- The CSV schema and Mailcow API behavior may vary between installations and versions. Review the API schema for your installed Mailcow release before using it in production.
+- Скрипт создаёт почтовые ящики, но не переносит письма, контакты, календари, алиасы или фильтры.
+- Старые пароли пользователей не извлекаются и не переносятся.
+- Формат CSV и поведение API могут различаться между версиями Mailcow. Перед промышленным использованием проверьте схему API именно установленной версии.
