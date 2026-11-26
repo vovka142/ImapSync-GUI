@@ -40,7 +40,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           cpanm --version
-          cpanm --notest App::cpanminus Authen::NTLM Compress::Zlib Crypt::OpenSSL::RSA Data::Uniqid Digest::HMAC Digest::HMAC_MD5 Email::Address Encode::IMAPUTF7 File::Copy::Recursive File::Tail HTTP::Daemon HTTP::Daemon::SSL HTTP::Request HTTP::Response HTTP::Status URI IO::Socket::INET6 IO::Socket::SSL IO::Tee JSON JSON::WebToken JSON::WebToken::Crypt::RSA HTML::Entities LWP::UserAgent Mail::IMAPClient Module::Implementation Module::Runtime Module::ScanDeps Net::Server Net::SSLeay Net::DNS Package::Stash Package::Stash::XS PAR::Packer Parse::RecDescent Proc::ProcessTable Readonly Regexp::Common Sys::MemInfo Term::ReadKey Try::Tiny Unicode::String
+          cpanm --notest App::cpanminus App::PP::Autolink Authen::NTLM Compress::Zlib Crypt::OpenSSL::RSA Data::Uniqid Digest::HMAC Digest::HMAC_MD5 Email::Address Encode::IMAPUTF7 File::Copy::Recursive File::Tail HTTP::Daemon HTTP::Daemon::SSL HTTP::Request HTTP::Response HTTP::Status URI IO::Socket::INET6 IO::Socket::SSL IO::Tee JSON JSON::WebToken JSON::WebToken::Crypt::RSA HTML::Entities LWP::UserAgent Mail::IMAPClient Module::Implementation Module::Runtime Module::ScanDeps Net::Server Net::SSLeay Net::DNS Package::Stash Package::Stash::XS PAR::Packer Parse::RecDescent Proc::ProcessTable Readonly Regexp::Common Sys::MemInfo Term::ReadKey Try::Tiny Unicode::String
 
       - name: Проверить исходный код и собрать imapsync.exe
         shell: pwsh
@@ -78,8 +78,10 @@ jobs:
           $ppArgs = @('-o', '..\gui\vendor\imapsync\imapsync.exe')
           foreach ($module in $modules) { $ppArgs += @('-M', $module) }
           $ppArgs += '.\imapsync'
-          pp @ppArgs
-          if ($LASTEXITCODE -ne 0) { throw 'PAR::Packer не смог собрать imapsync.exe' }
+          # pp_autolink рекурсивно добавляет нативные DLL-зависимости XS-модулей,
+          # включая OpenSSL DLL, необходимые Net::SSLeay.
+          pp_autolink @ppArgs
+          if ($LASTEXITCODE -ne 0) { throw 'pp_autolink не смог собрать imapsync.exe с нативными DLL-зависимостями' }
           Set-Location ..\gui
           .\vendor\imapsync\imapsync.exe --version
           if ($LASTEXITCODE -ne 0) { throw 'Проверка imapsync.exe завершилась ошибкой' }
