@@ -61,7 +61,7 @@ class ImapSync:
                 output = f"Код завершения: {result.returncode}"
             raise RuntimeError(output[-6000:])
 
-    def sync_process(self) -> subprocess.Popen[str]:
+    def sync_process(self, env: dict[str, str] | None = None) -> subprocess.Popen[str]:
         cfg = self.config
         args = [
             self.executable(),
@@ -84,4 +84,5 @@ class ImapSync:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            env=env,
         )
