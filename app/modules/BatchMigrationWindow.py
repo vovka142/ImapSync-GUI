@@ -1,6 +1,9 @@
 """Окно пакетной миграции почтовых ящиков из CSV."""
 
 import csv
+import os
+import shutil
+import tempfile
 import threading
 import tkinter as tk
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -31,6 +34,9 @@ class BatchMigrationWindow:
         self.stop_event = threading.Event()
         self.process_lock = threading.Lock()
         self.processes: dict[int, object] = {}
+        self.worker_local = threading.local()
+        self.worker_temp_lock = threading.Lock()
+        self.worker_temp_dirs: list[str] = []
         self.running = False
 
         self.source_host = tk.StringVar(value=source.get("host", ""))
@@ -278,6 +284,8 @@ class BatchMigrationWindow:
         self.__set_progress_threadsafe(f"Перенос: 0/{len(ready)}")
 
         completed = 0
+        self.worker_temp_dirs = []
+        self.worker_local = threading.local()
         with ThreadPoolExecutor(max_workers=workers) as executor:
             futures = {
                 executor.submit(self.__run_one, index, source_host, source_port, target_host, target_port): index
@@ -301,6 +309,11 @@ class BatchMigrationWindow:
                     self.__log_threadsafe(f"[{self.jobs[index]['source_user']}] Ошибка: {error}")
                 completed += 1
                 self.__set_progress_threadsafe(f"Обработано: {completed}/{len(ready)}")
+
+        # У каждого рабочего потока свой PAR-кэш. Это позволяет запускать
+        # до трёх imapsync одновременно без гонки распаковки общих файлов.
+        for temp_dir in self.worker_temp_dirs:
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
         if self.stop_event.is_set():
             self.__finish_threadsafe("Перенос остановлен пользователем.")
@@ -336,7 +349,15 @@ class BatchMigrationWindow:
         cfg = self.__config(index, source_host, source_port, target_host, target_port)
         self.__set_row_threadsafe(index, "Перенос", "Выполняется")
         self.__log_threadsafe(f"[{job['source_user']}] Начат перенос.")
-        process = ImapSync(cfg).sync_process()
+        par_temp_dir = getattr(self.worker_local, "par_temp_dir", None)
+        if par_temp_dir is None:
+            par_temp_dir = tempfile.mkdtemp(prefix="imapsync-par-")
+            self.worker_local.par_temp_dir = par_temp_dir
+            with self.worker_temp_lock:
+                self.worker_temp_dirs.append(par_temp_dir)
+        process_env = os.environ.copy()
+        process_env["PAR_GLOBAL_TEMP"] = par_temp_dir
+        process = ImapSync(cfg).sync_process(env=process_env)
         with self.process_lock:
             self.processes[index] = process
         if self.stop_event.is_set():
