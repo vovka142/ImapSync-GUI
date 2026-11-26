@@ -2,6 +2,8 @@ name: Сборка ImapSync-GUI и движка imapsync
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
     paths:
@@ -108,6 +110,14 @@ jobs:
           .\imaputf7-smoke.exe
           if ($LASTEXITCODE -ne 0) { throw 'Тест декодирования IMAP-UTF-7 завершился ошибкой' }
           Remove-Item .\imaputf7-smoke.pl, .\imaputf7-smoke.exe -Force
+
+      - name: Проверить пакетную миграцию и CSV
+        shell: pwsh
+        run: |
+          Set-Location gui
+          python -m compileall -q main.py app tests
+          python -m unittest discover -s tests -v
+          python -m json.tool locales/ru.json | Out-Null
 
       - name: Установить PyInstaller
         shell: pwsh

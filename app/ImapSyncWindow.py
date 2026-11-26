@@ -81,9 +81,17 @@ class ImapSyncWindow:
         actions.grid(row=2, column=0, sticky="ew", pady=(22, 16))
         self.action_button = self.__make_button(actions, __("button_start"), self.__start_sync, Theme.ACCENT, "white", 11, bold=True)
         self.action_button.pack(side="left")
+        self.__make_button(
+            actions, "Пакетный перенос CSV", self.__open_batch_migration,
+            Theme.SECONDARY, Theme.INK, 10,
+        ).pack(side="left", padx=(12, 0))
 
         self.banner = ResultBanner(self.container)
         self.banner.grid(row=3, column=0, sticky="ew")
+
+    def __open_batch_migration(self):
+        from app.modules.BatchMigrationWindow import BatchMigrationWindow
+        BatchMigrationWindow(self.root, self.source_form.get_config(), self.target_form.get_config())
 
     def __build_output(self):
         bar = tk.Frame(self.container, bg=Theme.PAPER)
