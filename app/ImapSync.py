@@ -84,5 +84,6 @@ class ImapSync:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            errors="replace",
             env=env,
         )
