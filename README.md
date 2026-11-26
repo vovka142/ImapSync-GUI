@@ -38,6 +38,10 @@ python -m PyInstaller --noconfirm --clean --onefile --windowed --name ImapSync-G
 
 Перед переносом рабочих ящиков проверьте настройки на тестовых учётных записях.
 
+## Дополнительный инструмент: создание ящиков Mailcow
+
+В каталоге [tools/mailcow-mailbox-provisioning](tools/mailcow-mailbox-provisioning/) находится Python-скрипт для массового создания почтовых ящиков Mailcow из CSV через API, а также инструкция по настройке, запуску и проверке результата. Скрипт пропускает уже существующие ящики и не выполняет прямых записей в MySQL.
+
 ## Лицензии
 
 GUI: MIT License исходного проекта. Движок imapsync: NO LIMIT PUBLIC LICENSE; см. [лицензию upstream](https://github.com/imapsync/imapsync/blob/master/LICENSE).
