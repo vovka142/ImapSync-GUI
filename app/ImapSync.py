@@ -52,10 +52,14 @@ class ImapSync:
             "--nolog",
         ]
 
-        result = subprocess.run(args, capture_output=True, text=True, timeout=20)
+        result = subprocess.run(args, capture_output=True, text=True, timeout=20, errors="replace")
         if result.returncode != 0:
-            lines = (result.stderr or result.stdout).strip().splitlines()
-            raise RuntimeError(lines[-1] if lines else f"Код завершения: {result.returncode}")
+            # Сохраняем весь вывод: первая строка обычно содержит первопричину
+            # ошибки Perl, а последняя — только сообщение о прерывании BEGIN.
+            output = "\\n".join(part.strip() for part in (result.stderr, result.stdout) if part and part.strip())
+            if not output:
+                output = f"Код завершения: {result.returncode}"
+            raise RuntimeError(output[-6000:])
 
     def sync_process(self) -> subprocess.Popen[str]:
         cfg = self.config
