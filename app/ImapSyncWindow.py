@@ -20,6 +20,7 @@ class ImapSyncWindow:
         self._stop_requested = False
         self._state = "idle"
         self.check_connection_var = tk.BooleanVar(value=False)
+        self._exclude_folders = ""
         Fonts.load()
         self.root.title("IMAPSync — перенос почты")
         self.root.geometry("1120x790")
@@ -177,6 +178,7 @@ class ImapSyncWindow:
             self.banner.show("blocked")
             return
 
+        self._exclude_folders = self.exclude_text.get("1.0", "end").strip()
         for form, status in ((self.source_form, self.source_status), (self.target_form, self.target_status)):
             form.clear_invalid()
             status.set_status('checking' if self.check_connection_var.get() else 'neutral')
@@ -313,5 +315,5 @@ class ImapSyncWindow:
         return {
             'host1': src['host'], 'port1': src['port'], 'user1': src['user'], 'password1': src['password'],
             'host2': tgt['host'],  'port2': tgt['port'], 'user2': tgt['user'], 'password2': tgt['password'],
-            'exclude_folders': self.exclude_text.get("1.0", "end").strip(),
+            'exclude_folders': self._exclude_folders,
         }
