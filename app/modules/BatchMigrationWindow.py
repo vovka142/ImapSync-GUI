@@ -370,7 +370,7 @@ class BatchMigrationWindow:
                     clean_line = line.rstrip()
                     if clean_line:
                         output_tail.append(clean_line)
-                        if len(output_tail) > 30:
+                        if len(output_tail) > 120:
                             output_tail.pop(0)
                         self.__log_threadsafe(f"[{job['source_user']}] {clean_line}")
             returncode = process.wait()
@@ -383,11 +383,18 @@ class BatchMigrationWindow:
         elif returncode == 0:
             status, details = "Успешно", "Перенос завершён"
         else:
-            diagnostic = "\\n".join(output_tail[-10:])
-            details = f"Код завершения: {returncode}"
+            diagnostic = "\\n".join(output_tail[-25:])
+            if returncode == 113:
+                status = "Превышена квота"
+                details = "На целевом почтовом ящике недостаточно места (EXIT_OVERQUOTA). Увеличьте квоту или освободите место и повторите перенос."
+            elif returncode == 116:
+                status = "Ошибка папки/кодировки"
+                details = "Не удалось создать или открыть папку IMAP (EXIT_ERR_CREATE). Проверьте строки диагностики папок ниже."
+            else:
+                status = "Ошибка"
+                details = f"Код завершения: {returncode}"
             if diagnostic:
-                details += f"\\nВывод imapsync:\\n{diagnostic}"
-            status = "Ошибка"
+                details += f"\\nДиагностика imapsync:\\n{diagnostic}"
 
         self.__set_row_threadsafe(index, status, details)
         with self.results_lock:
