@@ -19,6 +19,7 @@ class ImapSyncWindow:
         self._running_process = None
         self._stop_requested = False
         self._state = "idle"
+        self.check_connection_var = tk.BooleanVar(value=False)
         Fonts.load()
         self.root.title("IMAPSync — перенос почты")
         self.root.geometry("1120x790")
@@ -85,6 +86,11 @@ class ImapSyncWindow:
             actions, "Пакетный перенос CSV", self.__open_batch_migration,
             Theme.SECONDARY, Theme.INK, 10,
         ).pack(side="left", padx=(12, 0))
+        tk.Checkbutton(
+            actions, text="Проверять подключение перед переносом",
+            variable=self.check_connection_var, bg=Theme.PAPER,
+            activebackground=Theme.PAPER, font=Fonts.ui_font(9),
+        ).pack(side="left", padx=(14, 0))
 
         self.banner = ResultBanner(self.container)
         self.banner.grid(row=3, column=0, sticky="ew")
@@ -154,7 +160,14 @@ class ImapSyncWindow:
 
         for form, status in ((self.source_form, self.source_status), (self.target_form, self.target_status)):
             form.clear_invalid()
-            status.set_status('checking')
+            status.set_status('checking' if self.check_connection_var.get() else 'neutral')
+        if not self.check_connection_var.get():
+            self.output_box.append("Предварительная проверка подключения отключена. Запускаю imapsync напрямую.")
+            self.output_box.append(__("migration_starting"))
+            self._stop_requested = False
+            self.__set_state("running")
+            Thread(target=self.__run_sync, daemon=True).start()
+            return
         self.__set_state("checking")
         Thread(target=self.__check_credentials, args=(self.__build_config(),), daemon=True).start()
 
