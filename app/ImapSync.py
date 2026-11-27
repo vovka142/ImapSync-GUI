@@ -92,6 +92,15 @@ class ImapSync:
             "--nolog",
         ]
 
+        folders_to_exclude = [
+            line.strip()
+            for line in cfg.get("exclude_folders", "").splitlines()
+            if line.strip()
+        ]
+        if folders_to_exclude:
+            exclude_pattern = "^(?:" + "|".join(re.escape(folder) for folder in folders_to_exclude) + ")$"
+            args.extend(["--exclude", exclude_pattern])
+
         return subprocess.Popen(
             args,
             stdout=subprocess.PIPE,
