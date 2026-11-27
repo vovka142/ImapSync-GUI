@@ -44,6 +44,7 @@ class BatchMigrationWindow:
         self.target_host = tk.StringVar(value=target.get("host", ""))
         self.target_port = tk.StringVar(value=target.get("port", "993"))
         self.mode = tk.StringVar(value="sequential")
+        self.check_connections = tk.BooleanVar(value=False)
 
         self.__build_ui()
         self.window.transient(master)
@@ -93,6 +94,9 @@ class BatchMigrationWindow:
         tk.Radiobutton(mode_bar, text="Параллельно (до 3 ящиков)",
                        variable=self.mode, value="parallel", bg=Theme.PAPER,
                        activebackground=Theme.PAPER, font=Fonts.ui_font(9)).pack(side="left", padx=(12, 0))
+        tk.Checkbutton(mode_bar, text="Проверять подключение перед переносом",
+                       variable=self.check_connections, bg=Theme.PAPER,
+                       activebackground=Theme.PAPER, font=Fonts.ui_font(9)).pack(side="left", padx=(18, 0))
 
         table_frame = tk.Frame(outer, bg=Theme.PAPER)
         table_frame.grid(row=4, column=0, sticky="nsew")
@@ -229,14 +233,19 @@ class BatchMigrationWindow:
             "target_host": self.target_host.get().strip(),
             "target_port": self.target_port.get().strip(),
             "workers": 3 if self.mode.get() == "parallel" else 1,
+            "check_connections": self.check_connections.get(),
         }
         self.running = True
         self.start_button.config(state="disabled")
         self.stop_button.config(state="normal")
         for index, job in enumerate(self.jobs):
-            self.__set_row(index, "Проверка", "")
-        self.progress.set("Проверка учётных записей перед переносом…")
-        self.__log("Начата проверка учётных записей. Проверка выполняется последовательно.")
+            self.__set_row(index, "Проверка" if self.check_connections.get() else "Ожидание", "")
+        if self.check_connections.get():
+            self.progress.set("Проверка учётных записей перед переносом…")
+            self.__log("Начата предварительная проверка учётных записей.")
+        else:
+            self.progress.set("Подготовка переноса без предварительной проверки…")
+            self.__log("Предварительная проверка отключена. Подключение будет выполнено непосредственно при переносе.")
         threading.Thread(target=self.__preflight_and_run, daemon=True).start()
 
     def __preflight_and_run(self):
@@ -250,6 +259,11 @@ class BatchMigrationWindow:
         for index, job in enumerate(self.jobs):
             if self.stop_event.is_set():
                 break
+            if not settings["check_connections"]:
+                ready.append(index)
+                self.__set_row_threadsafe(index, "Готов к переносу", "Проверка пропущена")
+                self.__set_progress_threadsafe(f"Подготовка ящиков: {index + 1}/{len(self.jobs)}")
+                continue
             try:
                 ImapSync.check_credentials(source_host, source_port, job["source_user"], job["source_password"])
                 ImapSync.check_credentials(target_host, target_port, job["target_user"], job["target_password"])
