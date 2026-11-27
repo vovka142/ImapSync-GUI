@@ -53,7 +53,14 @@ class ImapSync:
         ]
 
         try:
-            result = subprocess.run(args, capture_output=True, text=True, timeout=60, errors="replace")
+            result = subprocess.run(
+                args,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                errors="replace",
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            )
         except subprocess.TimeoutExpired as error:
             raise TimeoutError(
                 f"Истекло время проверки подключения к {host}:{port} (60 секунд)."
@@ -92,4 +99,5 @@ class ImapSync:
             text=True,
             errors="replace",
             env=env,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
         )
