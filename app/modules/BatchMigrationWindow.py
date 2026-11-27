@@ -44,6 +44,7 @@ class BatchMigrationWindow:
         self.target_host = tk.StringVar(value=target.get("host", ""))
         self.target_port = tk.StringVar(value=target.get("port", "993"))
         self.mode = tk.StringVar(value="sequential")
+        self.check_connections = tk.BooleanVar(value=False)
 
         self.__build_ui()
         self.window.transient(master)
@@ -53,8 +54,8 @@ class BatchMigrationWindow:
         outer = tk.Frame(self.window, bg=Theme.PAPER, padx=22, pady=18)
         outer.pack(fill="both", expand=True)
         outer.grid_columnconfigure(0, weight=1)
-        outer.grid_rowconfigure(4, weight=1)
-        outer.grid_rowconfigure(6, weight=1)
+        outer.grid_rowconfigure(5, weight=1)
+        outer.grid_rowconfigure(7, weight=1)
 
         tk.Label(
             outer, text="Пакетная миграция из CSV",
@@ -93,9 +94,29 @@ class BatchMigrationWindow:
         tk.Radiobutton(mode_bar, text="Параллельно (до 3 ящиков)",
                        variable=self.mode, value="parallel", bg=Theme.PAPER,
                        activebackground=Theme.PAPER, font=Fonts.ui_font(9)).pack(side="left", padx=(12, 0))
+        tk.Checkbutton(mode_bar, text="Проверять подключение перед переносом",
+                       variable=self.check_connections, bg=Theme.PAPER,
+                       activebackground=Theme.PAPER, font=Fonts.ui_font(9)).pack(side="left", padx=(18, 0))
+
+        exclude_frame = tk.Frame(outer, bg=Theme.PAPER)
+        exclude_frame.grid(row=4, column=0, sticky="ew", pady=(0, 8))
+        tk.Label(
+            exclude_frame, text="Не переносить папки (точное имя, по одной на строку)",
+            font=Fonts.ui_font(9, bold=True), bg=Theme.PAPER, fg=Theme.INK,
+        ).pack(anchor="w", pady=(0, 4))
+        self.exclude_text = tk.Text(
+            exclude_frame, height=2, font=Fonts.mono_font(9), wrap="none",
+            bg=Theme.FIELD, fg=Theme.INK, relief="flat", padx=8, pady=5,
+            highlightthickness=1, highlightbackground=Theme.LINE,
+        )
+        self.exclude_text.pack(fill="x")
+        tk.Label(
+            exclude_frame, text="Полное имя папки как в журнале imapsync. Список применяется ко всем ящикам в этом запуске.",
+            font=Fonts.ui_font(8), bg=Theme.PAPER, fg=Theme.MUTED,
+        ).pack(anchor="w", pady=(3, 0))
 
         table_frame = tk.Frame(outer, bg=Theme.PAPER)
-        table_frame.grid(row=4, column=0, sticky="nsew")
+        table_frame.grid(row=5, column=0, sticky="nsew")
         table_frame.grid_columnconfigure(0, weight=1)
         table_frame.grid_rowconfigure(0, weight=1)
         self.table = ttk.Treeview(
@@ -119,10 +140,10 @@ class BatchMigrationWindow:
         self.progress = tk.StringVar(value="Загрузите CSV со списком почтовых ящиков.")
         tk.Label(outer, textvariable=self.progress, font=Fonts.ui_font(9),
                  bg=Theme.PAPER, fg=Theme.MUTED, anchor="w").grid(
-                     row=5, column=0, sticky="ew", pady=(8, 6))
+                     row=6, column=0, sticky="ew", pady=(8, 6))
 
         log_frame = tk.Frame(outer, bg=Theme.PAPER)
-        log_frame.grid(row=6, column=0, sticky="nsew")
+        log_frame.grid(row=7, column=0, sticky="nsew")
         log_frame.grid_columnconfigure(0, weight=1)
         log_frame.grid_rowconfigure(0, weight=1)
         self.log = tk.Text(log_frame, height=8, font=Fonts.mono_font(9),
@@ -134,7 +155,7 @@ class BatchMigrationWindow:
         log_scroll.grid(row=0, column=1, sticky="ns")
 
         buttons = tk.Frame(outer, bg=Theme.PAPER)
-        buttons.grid(row=7, column=0, sticky="ew", pady=(12, 0))
+        buttons.grid(row=8, column=0, sticky="ew", pady=(12, 0))
         self.start_button = self.__button(buttons, "Начать перенос", self.__start, Theme.ACCENT, "white")
         self.start_button.pack(side="left")
         self.stop_button = self.__button(buttons, "Остановить", self.__stop, Theme.DANGER, "white")
@@ -229,14 +250,20 @@ class BatchMigrationWindow:
             "target_host": self.target_host.get().strip(),
             "target_port": self.target_port.get().strip(),
             "workers": 3 if self.mode.get() == "parallel" else 1,
+            "check_connections": self.check_connections.get(),
+            "exclude_folders": self.exclude_text.get("1.0", "end").strip(),
         }
         self.running = True
         self.start_button.config(state="disabled")
         self.stop_button.config(state="normal")
         for index, job in enumerate(self.jobs):
-            self.__set_row(index, "Проверка", "")
-        self.progress.set("Проверка учётных записей перед переносом…")
-        self.__log("Начата проверка учётных записей. Проверка выполняется последовательно.")
+            self.__set_row(index, "Проверка" if self.check_connections.get() else "Ожидание", "")
+        if self.check_connections.get():
+            self.progress.set("Проверка учётных записей перед переносом…")
+            self.__log("Начата предварительная проверка учётных записей.")
+        else:
+            self.progress.set("Подготовка переноса без предварительной проверки…")
+            self.__log("Предварительная проверка отключена. Подключение будет выполнено непосредственно при переносе.")
         threading.Thread(target=self.__preflight_and_run, daemon=True).start()
 
     def __preflight_and_run(self):
@@ -250,6 +277,11 @@ class BatchMigrationWindow:
         for index, job in enumerate(self.jobs):
             if self.stop_event.is_set():
                 break
+            if not settings["check_connections"]:
+                ready.append(index)
+                self.__set_row_threadsafe(index, "Готов к переносу", "Проверка пропущена")
+                self.__set_progress_threadsafe(f"Подготовка ящиков: {index + 1}/{len(self.jobs)}")
+                continue
             try:
                 ImapSync.check_credentials(source_host, source_port, job["source_user"], job["source_password"])
                 ImapSync.check_credentials(target_host, target_port, job["target_user"], job["target_password"])
@@ -329,6 +361,7 @@ class BatchMigrationWindow:
             "user1": job["source_user"], "password1": job["source_password"],
             "host2": target_host, "port2": target_port,
             "user2": job["target_user"], "password2": job["target_password"],
+            "exclude_folders": self.batch_settings.get("exclude_folders", ""),
         }
 
     def __run_one(self, index, source_host, source_port, target_host, target_port):
@@ -364,14 +397,19 @@ class BatchMigrationWindow:
             process.terminate()
 
         output_tail: list[str] = []
+        folder_diagnostics: list[str] = []
         try:
             if process.stdout:
                 for line in process.stdout:
                     clean_line = line.rstrip()
                     if clean_line:
                         output_tail.append(clean_line)
-                        if len(output_tail) > 30:
+                        if len(output_tail) > 120:
                             output_tail.pop(0)
+                        if any(marker in clean_line.lower() for marker in ("folder", "mailbox", "mutf-7", "create", "select")):
+                            folder_diagnostics.append(clean_line)
+                            if len(folder_diagnostics) > 30:
+                                folder_diagnostics.pop(0)
                         self.__log_threadsafe(f"[{job['source_user']}] {clean_line}")
             returncode = process.wait()
         finally:
@@ -383,11 +421,19 @@ class BatchMigrationWindow:
         elif returncode == 0:
             status, details = "Успешно", "Перенос завершён"
         else:
-            diagnostic = "\\n".join(output_tail[-10:])
-            details = f"Код завершения: {returncode}"
+            diagnostic_lines = folder_diagnostics[-20:] if returncode == 116 and folder_diagnostics else output_tail[-25:]
+            diagnostic = "\\n".join(diagnostic_lines)
+            if returncode == 113:
+                status = "Превышена квота"
+                details = "На целевом почтовом ящике недостаточно места (EXIT_OVERQUOTA). Увеличьте квоту или освободите место и повторите перенос."
+            elif returncode == 116:
+                status = "Ошибка папки/кодировки"
+                details = "Не удалось создать или открыть папку IMAP (EXIT_ERR_CREATE). Проверьте строки диагностики папок ниже."
+            else:
+                status = "Ошибка"
+                details = f"Код завершения: {returncode}"
             if diagnostic:
-                details += f"\\nВывод imapsync:\\n{diagnostic}"
-            status = "Ошибка"
+                details += f"\\nДиагностика imapsync:\\n{diagnostic}"
 
         self.__set_row_threadsafe(index, status, details)
         with self.results_lock:

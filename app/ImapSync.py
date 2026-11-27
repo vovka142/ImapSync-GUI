@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -52,7 +53,19 @@ class ImapSync:
             "--nolog",
         ]
 
-        result = subprocess.run(args, capture_output=True, text=True, timeout=20, errors="replace")
+        try:
+            result = subprocess.run(
+                args,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                errors="replace",
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            )
+        except subprocess.TimeoutExpired as error:
+            raise TimeoutError(
+                f"Истекло время проверки подключения к {host}:{port} (60 секунд)."
+            ) from error
         if result.returncode != 0:
             # Сохраняем весь вывод: первая строка обычно содержит первопричину
             # ошибки Perl, а последняя — только сообщение о прерывании BEGIN.
@@ -76,8 +89,18 @@ class ImapSync:
             "--automap",
             "--syncinternaldates",
             "--nofoldersizes",
+            "--debugfolders",
             "--nolog",
         ]
+
+        folders_to_exclude = [
+            line.strip()
+            for line in cfg.get("exclude_folders", "").splitlines()
+            if line.strip()
+        ]
+        if folders_to_exclude:
+            exclude_pattern = "^(?:" + "|".join(re.escape(folder) for folder in folders_to_exclude) + ")$"
+            args.extend(["--exclude", exclude_pattern])
 
         return subprocess.Popen(
             args,
@@ -86,4 +109,5 @@ class ImapSync:
             text=True,
             errors="replace",
             env=env,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
         )

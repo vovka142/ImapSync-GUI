@@ -13,7 +13,7 @@
   "button_stop": "Остановить",
   "button_clear": "Очистить журнал",
   "check_imapsync_missing": "Не найдена программа imapsync. Установите её и добавьте каталог с программой в PATH.",
-  "check_timeout": "Истекло время ожидания подключения к {host}:{port}.",
+  "check_timeout": "Истекло время проверки подключения к {host}:{port} (60 секунд).",
   "check_failed_detail": "Ошибка входа: {detail}",
   "migration_starting": "Запуск переноса…",
   "migration_stopping": "Остановка переноса…",
