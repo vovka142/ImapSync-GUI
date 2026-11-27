@@ -30,10 +30,11 @@ class ImapSyncWindow:
         self.container = tk.Frame(self.root, bg=Theme.PAPER, padx=34, pady=30)
         self.container.pack(fill="both", expand=True)
         self.container.grid_columnconfigure(0, weight=1)
-        self.container.grid_rowconfigure(5, weight=1)
+        self.container.grid_rowconfigure(6, weight=1)
 
         self.__build_header()
         self.__build_forms()
+        self.__build_exclusions()
         self.__build_actions()
         self.__build_output()
         self.root.bind("<Return>", self.__on_return)
@@ -77,9 +78,27 @@ class ImapSyncWindow:
         status = StatusIndicator(card, row=2, column=0, sticky="w", pady=(8, 0))
         return form, status
 
+    def __build_exclusions(self):
+        frame = tk.Frame(self.container, bg=Theme.PAPER)
+        frame.grid(row=2, column=0, sticky="ew", pady=(14, 0))
+        tk.Label(
+            frame, text="Не переносить папки (точное имя, по одной на строку)",
+            font=Fonts.ui_font(9, bold=True), bg=Theme.PAPER, fg=Theme.INK,
+        ).pack(anchor="w", pady=(0, 5))
+        self.exclude_text = tk.Text(
+            frame, height=2, font=Fonts.mono_font(9), wrap="none",
+            bg=Theme.FIELD, fg=Theme.INK, relief="flat", padx=8, pady=5,
+            highlightthickness=1, highlightbackground=Theme.LINE,
+        )
+        self.exclude_text.pack(fill="x")
+        tk.Label(
+            frame, text="Указывайте полное имя папки так, как оно отображается в журнале imapsync. Пустое поле — переносить все папки.",
+            font=Fonts.ui_font(8), bg=Theme.PAPER, fg=Theme.MUTED,
+        ).pack(anchor="w", pady=(3, 0))
+
     def __build_actions(self):
         actions = tk.Frame(self.container, bg=Theme.PAPER)
-        actions.grid(row=2, column=0, sticky="ew", pady=(22, 16))
+        actions.grid(row=3, column=0, sticky="ew", pady=(14, 12))
         self.action_button = self.__make_button(actions, __("button_start"), self.__start_sync, Theme.ACCENT, "white", 11, bold=True)
         self.action_button.pack(side="left")
         self.__make_button(
@@ -93,7 +112,7 @@ class ImapSyncWindow:
         ).pack(side="left", padx=(14, 0))
 
         self.banner = ResultBanner(self.container)
-        self.banner.grid(row=3, column=0, sticky="ew")
+        self.banner.grid(row=4, column=0, sticky="ew")
 
     def __open_batch_migration(self):
         from app.modules.BatchMigrationWindow import BatchMigrationWindow
@@ -101,7 +120,7 @@ class ImapSyncWindow:
 
     def __build_output(self):
         bar = tk.Frame(self.container, bg=Theme.PAPER)
-        bar.grid(row=4, column=0, sticky="ew", pady=(20, 8))
+        bar.grid(row=5, column=0, sticky="ew", pady=(14, 8))
         self.details_button = tk.Button(
             bar, command=lambda: self.__set_details_visible(not self._details_visible), font=Fonts.ui_font(10, bold=True),
             relief="flat", bg=Theme.PAPER, fg=Theme.INK, activebackground=Theme.PAPER, activeforeground=Theme.INK,
@@ -111,7 +130,7 @@ class ImapSyncWindow:
         self.__make_button(bar, __("button_clear"), self.__clear_output, Theme.SECONDARY, Theme.INK, 9).pack(side="right")
 
         self.output_box = OutputBox(self.container, height=14, width=40)  # width stretches with the window
-        self.output_box.widget().grid(row=5, column=0, sticky="nsew")
+        self.output_box.widget().grid(row=6, column=0, sticky="nsew")
         self.__set_details_visible(False)
 
     @staticmethod
@@ -294,4 +313,5 @@ class ImapSyncWindow:
         return {
             'host1': src['host'], 'port1': src['port'], 'user1': src['user'], 'password1': src['password'],
             'host2': tgt['host'],  'port2': tgt['port'], 'user2': tgt['user'], 'password2': tgt['password'],
+            'exclude_folders': self.exclude_text.get("1.0", "end").strip(),
         }
