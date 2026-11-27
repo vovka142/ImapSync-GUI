@@ -52,7 +52,12 @@ class ImapSync:
             "--nolog",
         ]
 
-        result = subprocess.run(args, capture_output=True, text=True, timeout=20, errors="replace")
+        try:
+            result = subprocess.run(args, capture_output=True, text=True, timeout=60, errors="replace")
+        except subprocess.TimeoutExpired as error:
+            raise TimeoutError(
+                f"Истекло время проверки подключения к {host}:{port} (60 секунд)."
+            ) from error
         if result.returncode != 0:
             # Сохраняем весь вывод: первая строка обычно содержит первопричину
             # ошибки Perl, а последняя — только сообщение о прерывании BEGIN.
@@ -76,6 +81,7 @@ class ImapSync:
             "--automap",
             "--syncinternaldates",
             "--nofoldersizes",
+            "--debugfolders",
             "--nolog",
         ]
 
