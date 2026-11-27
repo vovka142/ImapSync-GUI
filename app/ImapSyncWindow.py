@@ -186,6 +186,8 @@ class ImapSyncWindow:
             ImapSync.check_credentials(host, port, user, password)
         except FileNotFoundError:
             return __("check_imapsync_missing"), ()
+        except TimeoutError as e:
+            return str(e), ("host", "port")
         except subprocess.TimeoutExpired:
             return __("check_timeout", host=host, port=port), ("host", "port")
         except RuntimeError as e:
