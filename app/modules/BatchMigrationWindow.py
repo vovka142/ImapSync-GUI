@@ -364,6 +364,7 @@ class BatchMigrationWindow:
             process.terminate()
 
         output_tail: list[str] = []
+        folder_diagnostics: list[str] = []
         try:
             if process.stdout:
                 for line in process.stdout:
@@ -372,6 +373,10 @@ class BatchMigrationWindow:
                         output_tail.append(clean_line)
                         if len(output_tail) > 120:
                             output_tail.pop(0)
+                        if any(marker in clean_line.lower() for marker in ("folder", "mailbox", "mutf-7", "create", "select")):
+                            folder_diagnostics.append(clean_line)
+                            if len(folder_diagnostics) > 30:
+                                folder_diagnostics.pop(0)
                         self.__log_threadsafe(f"[{job['source_user']}] {clean_line}")
             returncode = process.wait()
         finally:
@@ -383,7 +388,8 @@ class BatchMigrationWindow:
         elif returncode == 0:
             status, details = "Успешно", "Перенос завершён"
         else:
-            diagnostic = "\\n".join(output_tail[-25:])
+            diagnostic_lines = folder_diagnostics[-20:] if returncode == 116 and folder_diagnostics else output_tail[-25:]
+            diagnostic = "\\n".join(diagnostic_lines)
             if returncode == 113:
                 status = "Превышена квота"
                 details = "На целевом почтовом ящике недостаточно места (EXIT_OVERQUOTA). Увеличьте квоту или освободите место и повторите перенос."
